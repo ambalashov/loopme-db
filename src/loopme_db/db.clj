@@ -2,7 +2,7 @@
   (:import [com.mchange.v2.c3p0 ComboPooledDataSource])
   (:require [loopme-db.config :as conf]))
 
-(defn- parse-conn-string [conn-str]
+(defn parse-conn-string [conn-str]
   (let [ms (re-matches #"(postgresql)://(.*):(.*)@(.*)"
                        conn-str)]
     {:subprotocol (second ms)
