@@ -17,6 +17,13 @@
 (def active-ad-delivery-log-sql
   "line_items.limited_by_daily_clicks = ?")
 
+(defn find-by-id
+  [id]
+  (cache/hit-or-miss-function
+    (keyword (str "creative-by-id-" id))
+    :long
+    #(first (sql/query @pooled-db ["SELECT * FROM creatives WHERE id = ?" id]))))
+
 (defn find-traceable
   "Search ad delivery log row with traceable line item"
   [creative-id]
