@@ -1,4 +1,4 @@
-(defproject loopme/db "0.1.1"
+(defproject loopme/db "0.1.2"
   :description "Loopme postgresql connection logic."
   :url "http://loopme.biz"
   :license {:name "MIT license"
@@ -10,4 +10,4 @@
   :dependencies [[org.clojure/clojure "1.5.1"]
                  [loopme/cache "0.1.2"]
                  [postgresql/postgresql "8.4-702.jdbc4"]
-                 [com.mchange/c3p0 "0.9.5-pre8"]])
+                 [org.clojure/java.jdbc "0.3.5"]])
