@@ -13,7 +13,7 @@
   [executor full-reload-interval full-reload-function update-interval update-fn]
   (.scheduleAtFixedRate
     ^ScheduledExecutorService executor
-    full-reload-function 0 full-reload-interval TimeUnit/SECONDS)
+    full-reload-function full-reload-interval full-reload-interval TimeUnit/SECONDS)
   (.scheduleAtFixedRate
     ^ScheduledExecutorService executor
     update-fn update-interval update-interval TimeUnit/SECONDS))
@@ -74,16 +74,12 @@
        (update-value db (keyword tn) (:id r) r))
      (update-value db :system :last_update_time time-now)))
 
-;(defn load-db
-;  ([sql-db db table-names] (load-db sql-db db table-names 0))
-;  ([sql-db db table-names update-time]
-;   ;(try
-;   (let [time-now (System/currentTimeMillis)]
-;     (doseq [tn table-names
-;             r (j/query
-;                 sql-db
-;                 [(str "select * from " tn " where updated_at >= ?") (Timestamp. update-time)]
-;                 :row-fn row-fn)]
-;       (update-value db (keyword tn) (:id r) r)
-;       )
-;     )))
+(defn load-db
+  "Load all data from tables"
+  [sql-db db table-names]
+  (doseq [tn table-names
+          r (j/query
+              sql-db
+              [(str "select * from " tn)]
+              :row-fn row-fn)]
+    (update-value db (keyword tn) (:id r) r)))

@@ -180,8 +180,10 @@
                      ;"brand_verticals_genres"
                      ;"billing_logs"
                      "apps"
-                     "control_group_tests"
+                     "control_groups"
                      ;"countries"
+                     "control_groups"
+                     "control_group_tests"
                      "creative_ranks"
                      "genres"
                      "handsets"
@@ -189,40 +191,37 @@
                      "notifications"
                      "orders"
                      "payment_details"
-                     "platforms"
                      ; "schema_migrations"
                      ; "statistics_app_campaigns"
                      ; "statistics_apps"
                      ; "statistics_campaigns"
                      ;"statistics_events"
+                     "platforms"
                      "statistics_monthly_apps"
                      "statistics_monthly_campaigns"
-                     "users"
                      ;"video_meta_infos"
                      ;"worker_logs"
+                     "users"
                      "ad_formats"
                      "line_items"
-                     "creatives"
                      ;"alternative_billing_logs"
+                     "creatives"
                      "content_categories"
                      "campaigns"
-                     "control_groups"
                      ])
-
-  (swap! last-update (fn [_] 0))
-
-  (load-db postgresql-db db ["apps"])
 
   (def db-conf (edn/read (PushbackReader. (FileReader. "postgres-conf.edn"))))
 
-  (time (load-db (:server2 db-conf) db ["campaigns"
-                                                            "line_items"
-                                                            "ad_formats"
-                                                            "creatives"
-                                                            "apps"
-                                                            "ad_format_ranks"
-                                                            "creative_ranks"
-                                                            "users"]))
+  (time (core/load-db (:server2 db-conf) db ["campaigns"
+                                          "line_items"
+                                          "ad_formats"
+                                          "creatives"
+                                          "apps"
+                                          "ad_format_ranks"
+                                          "creative_ranks"
+                                          "users"
+                                          "control_groups"
+                                          "control_group_tests"]))
 
   (swap! db (fn [_] {}))
   (clojure.pprint/pprint @db)
@@ -261,8 +260,11 @@
   (clojure.pprint/pprint (first (:creative_ranks @db)))
   (clojure.pprint/pprint (first (:ad_formats @db)))
   (clojure.pprint/pprint (last (:line_items @db)))
+  (clojure.pprint/pprint (last (:control_group_tests @db)))
 
   (count (:ad_formats @db))
+  (into #{} (map (fn [e] (:app_ids (val e))) (:control_group_tests @db)))
+  (into #{} (map (fn [e] (:country_ids (val e))) (:control_group_tests @db)))
   (into #{} (map (fn [e] (:orientation (val e))) (:ad_formats @db)))
   (into #{} (map (fn [e] (:app_promo (val e))) (:users @db)))
   (into #{} (map (fn [e] (:days_of_week (val e))) (:line_items @db)))
@@ -301,13 +303,13 @@
   (def publisher nil)
 
                                                             ;; select ad_formats
-  (profile 1000
+  (profile 100000
            #(filter
              (fn [e]
                (let [line_intem_id (:line_item_id (val e))
-                     line_item (get-value db :line_items line_intem_id)
-                     user_id (field db :line_items :user_id line_intem_id)
-                     user  (get-value db :users user_id)]
+                     line_item (core/get-value db :line_items line_intem_id)
+                     user_id (core/field db :line_items :user_id line_intem_id)
+                     user  (core/get-value db :users user_id)]
                  (and
                    ;(:line_item_id (val e))
                    (and

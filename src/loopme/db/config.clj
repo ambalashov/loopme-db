@@ -1,10 +1,10 @@
 (ns loopme.db.config)
 
-;update interval in miliseconds
-(def update-interval 10000)
+;update interval in sec
+(def update-interval 60)
 
-;full db update interval
-(def full-update-interval 300000)
+;full db update sec
+(def full-update-interval 300)
 
 (def postgresql-url
   "Url for PostgreSQL database with login, password, port and table."
