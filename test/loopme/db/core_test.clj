@@ -1,9 +1,7 @@
 (ns loopme.db.core-test
   (:import [clojure.lang IPersistentMap]
-           [java.util Date]
            [java.sql Timestamp]
-           [org.postgresql.jdbc4 Jdbc4Array]
-           [java.util.concurrent Executors TimeUnit Executor ScheduledExecutorService])
+           [java.util.concurrent Executors])
   (:require [clojure.test :refer :all]
             [loopme.db.core :as core]
             [loopme.db.config :as conf]
@@ -49,6 +47,26 @@
     (let [db (atom {:test {1 {:name "name"}}})]
       (core/remove-value db :test 1)
       (is (nil? (core/get-value db :test 1))))))
+
+(deftest get-nested-val
+  (let [db (atom {:table1 {1 {:id 1 :name "row1" :table1_id 1}
+                     2 {:id 2 :name "row2" :table1_id 2}}
+            :table2 {1 {:id 1 :name "row1-tb2" :table3_id 1}
+                     2 {:id 2 :name "row2-tb2" :table3_id 3}}
+            :table3 {1 {:id 1 :name "row1-tb3" :table4_id 1}
+                     2 {:id 2 :name "row2-tb3" :table4_id 5}
+                     3 {:id 3 :name "row3-tb3"}}
+            :table4 {1 {:id 1 :name "row1-tb4"}}})]
+    (testing "Should get value in collaction"
+      (is (= "row1" (core/get-nested-val db :table1 1 :name)))
+      (is (= 1 (core/get-nested-val db :table1 1 :table1_id )))
+      (is (= "row1-tb2" (core/get-nested-val db :table1 1 :table1_id :table2 :name)))
+      (is (= "row1-tb3" (core/get-nested-val db :table1 1 :table1_id
+                                             :table2 :table3_id
+                                             :table3 :name)))
+      (is (nil? (core/get-nested-val db :table1 2 :table1_id
+                                             :table2 :table3_id
+                                             :table3 :table4_id))))))
 
 (def test-source-db {:subprotocol "postgresql"
                      :subname "//127.0.0.1:5432/loopme_test"
@@ -110,19 +128,18 @@
                                      :key        "app-key"
                                      :created_at (Timestamp. (System/currentTimeMillis))
                                      :updated_at (Timestamp. (System/currentTimeMillis))})
-    (testing "Should full load db after delay"
+    (testing "Should full load db on start"
       (is (= {} @db))
       ;start executor and init load
       (core/init
         executor
         10
         #(do
-          (println "run full reload")
-          (core/remove-value db :system :last_update_time)
-          (core/update-db test-source-db db ["apps"]))
+
+          (core/load-db test-source-db db ["apps"]))
         7
         #(do
-          (println "run only new reload. " "last update: " (core/get-value db :system :last_update_time))
+
           (core/update-db test-source-db db ["apps"])))
       (Thread/sleep 4000)
       (is (= 1 (count (:apps @db))))
@@ -343,83 +360,3 @@
              (:ad_formats @db)))
 
   )
-
-;(active-user           (-> params :application :user_id))
-;(active-line-item)
-;
-;(for-day               (current-day))
-;(for-country           (-> params :targeting-params :country-code))
-;(for-age-group         (-> params :application :age_groups))
-;(for-platform          (-> params :application :platform_id))
-;(for-genre             (-> params :application :genre_id))
-;(for-age-rating        (-> params :application :age_rating))
-;(for-category          (-> params :application :app_category_id))
-;(for-app               (-> params :application :id))
-;(for-gender            (-> params :application :gendre_id))
-;(for-os-named          (-> params :targeting-params :handset :os))
-;(for-os-version        (-> params :targeting-params :handset :os-version))
-;(for-device-model      (-> params :targeting-params :handset :model))
-;(for-isp               (-> params :targeting-params :isp :name))
-;(for-segments          (-> params :targeting-params :segments))
-;(for-publishers        (-> params :application :company))
-;(except-publishers     (-> params :application :company))
-;(for-quality           (-> params :application :quality))
-;(except-country        (-> params :targeting-params :country-code))
-;(except-hour           (current-hour))
-;(except-app            (-> params :application :id))
-;(except-genre          (-> params :application :genre_id))
-;(except-category       (-> params :application :app_category_id))
-;(except-mobile-carrier (-> params :targeting-params :is-mobile))
-;(except-isps           (-> params :targeting-params :isp :name))
-;(excluded-by-daily     (-> params :targeting-params :excluded))
-;(excluded-by-exchange  ids-for-exchange)
-;(excluded-from-ron     (-> params :application :is_excluded_from_ron))
-
-;--SELECT * FROM ad_formats
-;INNER JOIN line_items ON line_items.id = ad_formats.line_item_id
-;LEFT OUTER JOIN campaigns ON campaigns.id = line_items.campaign_id
-;LEFT OUTER JOIN users     ON users.id     = line_items.user_id
-;LEFT OUTER JOIN ad_format_ranks ON ad_formats.id = ad_format_ranks.ad_format_id AND ad_format_ranks.app_id = ?
-;--WHERE users.state = 1
-;--AND ((users.role_id = 1 AND users.balance_cents > 0)
-;--     OR  (users.role_id = 2 AND users.app_promo = ?))
-;-- AND (line_items.user_id = ? OR users.role_id = 1)
-;--AND line_items.state = ?
-;--AND line_items.limited_by_daily_clicks = ?
-;--AND line_items.limited_by_daily_views = ?
-;AND (? = ANY ( line_items.days_of_week ))
-;
-;-- AND (? = ANY (line_items.country_ids)
-;--       OR line_items.country_ids = '{}'
-;--      OR line_items.country_ids = '{""}')
-;
-; --     AND (? = ANY(line_items.app_ids)
-; --             OR line_items.app_ids = '{}')
-;
-;-- AND (line_items.handset_os = ?
-;--      OR line_items.handset_os = ''
-;--      OR line_items.handset_os IS NULL)
-;
-;-- AND (? = ANY (line_items.handset_os_versions)
-;--      OR line_items.handset_os_versions = '{}')
-;
-;-- AND (? = ANY (line_items.handset_models)
-;--       OR line_items.handset_models = '{}')
-;
-;-- AND (? = ANY (line_items.isps)
-;--      OR line_items.isps = '{}')
-;
-;-- AND (line_items.segments && ARRAY[-1]::integer[]
-;--       OR line_items.segments = '{}')
-;
-;-- AND (line_items.publishers && ARRAY[$$$$]::varchar[]
-;--      OR line_items.publishers = '{}')
-;           AND ( NOT (line_items.except_publishers && ARRAY[$$$$]::varchar[]) OR line_items.except_publishers = '{}')
-;                     AND (NOT ( ? = ANY( line_items.except_country_ids )))
-;                     AND (NOT ( ? = ANY( line_items.except_utc_hours )))
-;                     AND (NOT ( ? = ANY( line_items.except_app_ids )))
-;                     AND ( NOT (? = ANY (line_items.except_isps))
-;                               OR line_items.except_isps = '{}' )
-;                               AND campaigns.state = 1
-;                               AND ad_formats.active_creative_count > 0
-;                               ORDER BY delivery_priority asc, is_new desc, rank DESC, random() LIMIT 1 OFFSET 0
