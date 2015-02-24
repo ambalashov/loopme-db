@@ -72,7 +72,7 @@
 (defn row-fn [row]
   (into {} (for [e (filter #(not (nil? (val %))) row)]
              (cond
-               (instance? Jdbc4Array (val e)) [(key e) (vec (.getArray (val e)))]
+               (instance? Jdbc4Array (val e)) [(key e) (into #{} (vec (.getArray (val e))))]
                (instance? Date (val e)) [(key e) (.getTime (val e))]
                :else [(key e) (val e)]))))
 
