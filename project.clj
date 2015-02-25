@@ -20,7 +20,7 @@
   :exclusions [org.clojure/clojure]
   :dependencies [[loopme/cache "0.1.2"]
                  [loopme/log "0.1.8"]
-                 [postgresql/postgresql "8.4-702.jdbc4"]
+                 [postgresql/postgresql "9.4-1200.jdbc4"]
                  [org.clojure/java.jdbc "0.3.5"]]
   :profiles {:dev {:resource-paths ["test-resources"]
                    :dependencies   [[org.clojure/clojure "1.6.0"]
