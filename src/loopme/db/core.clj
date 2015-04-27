@@ -41,6 +41,8 @@
     (catch Exception e
       (ERROR logger "Db get error" e))))
 
+;; === DOMAIN HELPERS ===
+
 (defn get-app [id]
   (get-cacheable :apps id))
 
@@ -80,6 +82,17 @@
      :line_items (->> id (get-cacheable :line_items)
                       :campaign_id (get-cacheable :campaigns))
      nil)))
+
+;; === TEST HELPERS ===
+
+(defn clear-cache []
+  (swap! C (fn [_] (cache/ttl-cache-factory {} :ttl 600000))))
+
+(defn put-in-cache [table id value]
+  (swap! C (fn [c] (assoc c [table id] value))))
+
+(defn evict-from-cache [table id]
+  (swap! C (fn [c] (dissoc c [table id]))))
 
 (comment
   (init "postgresql://postgres:@localhost:5432/dashboard_local")
