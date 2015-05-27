@@ -22,29 +22,36 @@
 (defn init [url]
   (swap! db-spec (fn [_] (config/parse-conn-string url))))
 
-(defn get-from-db [table id]
-  (first
-    (j/query
-      @db-spec
-      [(str "select * from " (name table) " where id = ?") id]
-      :row-fn row-fn)))
+(defn get-from-db
+  ([table value] (get-from-db table "id" value))
+  ([table field value]
+   (first
+     (j/query
+       @db-spec
+       [(str "select * from " (name table) " where " field " = ?") value]
+       :row-fn row-fn))))
 
-(defn get-cacheable [table id]
-  (try
-    (when (and table id)
-      (let [key [table id]]
-        (if (cache/has? @C key)
-          (clojure.core/get @C key)
-          (let [v (get-from-db table id)]
-            (swap! C (fn [c] (assoc c key v)))
-            v))))
-    (catch Exception e
-      (ERROR logger "Db get error" e))))
+(defn get-cacheable
+  ([table value] (get-cacheable table "id" value))
+  ([table field value]
+   (try
+     (when (and table field value)
+       (let [key [table field value]]
+         (if (cache/has? @C key)
+           (clojure.core/get @C key)
+           (let [v (get-from-db table field value)]
+             (swap! C (fn [c] (assoc c key v)))
+             v))))
+     (catch Exception e
+       (ERROR logger "Db get error" e)))))
 
 ;; === DOMAIN HELPERS ===
 
 (defn get-app [id]
   (get-cacheable :apps id))
+
+(defn get-app-by-key [key]
+  (get-cacheable :apps "key" key))
 
 (defn get-creative [id]
   (get-cacheable :creatives id))
@@ -83,6 +90,9 @@
                       :campaign_id (get-cacheable :campaigns))
      nil)))
 
+(defn get-exchange [name]
+  (get-cacheable :exchanges "name" name))
+
 ;; === TEST HELPERS ===
 
 (defn clear-cache []
@@ -108,5 +118,10 @@
   (clojure.pprint/pprint
     (get-line-item :creatives 21709))
   (clojure.pprint/pprint
-    (get-campaign :creatives 21709)))
+    (get-campaign :creatives 21709))
+
+  (-> (get-app 336) :key)
+  (get-app-by-key "387e601986")
+
+  (get-exchange "inneractive"))
 
