@@ -1,4 +1,4 @@
-(defproject loopme/db "0.1.10-SNAPSHOT"
+(defproject loopme/db "0.1.10"
   :description "Loopme postgresql connection logic."
   :url "http://loopme.biz"
   :license {:name "MIT license"
