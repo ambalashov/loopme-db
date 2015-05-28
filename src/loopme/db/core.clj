@@ -1,6 +1,7 @@
 (ns loopme.db.core
   (:import [org.postgresql.jdbc4 Jdbc4Array]
-           [java.util Date])
+           [java.util Date]
+           [com.mchange.v2.c3p0 ComboPooledDataSource])
   (:require [clojure.java.jdbc :as j]
             [loopme.log :refer :all]
             [loopme.db.config :as config]
@@ -22,12 +23,29 @@
 (defn init [url]
   (swap! db-spec (fn [_] (config/parse-conn-string url))))
 
+(defn pool [spec]
+  (let [cpds (doto (ComboPooledDataSource.)
+               (.setDriverClass (:classname spec))
+               (.setJdbcUrl (str "jdbc:" (:subprotocol spec) ":" (:subname spec)))
+               (.setUser (:user spec))
+               (.setPassword (:password spec))
+               ;; expire excess connections after 30 minutes of inactivity:
+               (.setMaxIdleTimeExcessConnections (* 30 60))
+               ;; expire connections after 3 hours of inactivity:
+               (.setMaxIdleTime (* 3 60 60))
+               (.setMaxPoolSize 1))]
+    {:datasource cpds}))
+
+(def pooled-db (delay (pool @db-spec)))
+
+(defn db-connection [] @pooled-db)
+
 (defn get-from-db
   ([table value] (get-from-db table "id" value))
   ([table field value]
    (first
      (j/query
-       @db-spec
+       (db-connection)
        [(str "select * from " (name table) " where " field " = ?") value]
        :row-fn row-fn))))
 
