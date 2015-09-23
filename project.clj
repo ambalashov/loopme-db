@@ -17,6 +17,16 @@
                         ["snapshots" {:url        "s3p://lm-artifacts/snapshots/"
                                       :username   :env
                                       :passphrase :env}]]
+  :manifest {"Implementation-Version" ~(fn [project] (:version project))}
+  :release-tasks [["vcs" "assert-committed"]
+                  ["change" "version"
+                   "leiningen.release/bump-version" "release"]
+                  ["vcs" "commit"]
+                  ["vcs" "tag"]
+                  ["deploy"]
+                  ["change" "version" "leiningen.release/bump-version"]
+                  ["vcs" "commit"]
+                  ["vcs" "push"]]
   :exclusions [org.clojure/clojure]
   :dependencies [[loopme/cache "0.1.2"]
                  [loopme/log "0.1.8"]
